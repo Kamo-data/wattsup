@@ -1,0 +1,192 @@
+version: 2
+
+models:
+  - name: stg_supplier_meter_readings_hourly
+    description: "Relevés de consommation horaires normalisés depuis raw.supplier_meter_readings (grain = hourly)."
+    columns:
+      - name: supplier
+        description: "Nom du fournisseur normalisé."
+        data_tests:
+          - not_null
+
+      - name: prm
+        description: "Identifiant PRM/PDL."
+        data_tests:
+          - not_null
+
+      - name: grain
+        description: "Grain de la donnée, attendu = hourly."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['hourly']
+
+      - name: period_start
+        description: "Début de l’intervalle de consommation."
+        data_tests:
+          - not_null
+
+      - name: period_end
+        description: "Fin de l’intervalle de consommation."
+        data_tests:
+          - not_null
+
+      - name: cadran
+        description: "Cadran tarifaire normalisé."
+        data_tests:
+          - not_null
+
+      - name: kwh
+        description: "Consommation en kWh."
+        data_tests:
+          - not_null
+
+      - name: read_type
+        description: "Type de relevé normalisé."
+        data_tests:
+          - not_null
+
+      - name: interval_minutes
+        description: "Durée de l’intervalle en minutes."
+        data_tests:
+          - not_null
+
+      - name: has_invalid_period
+        description: "Flag si period_end <= period_start."
+        data_tests:
+          - not_null
+
+      - name: has_negative_kwh
+        description: "Flag si kwh < 0."
+        data_tests:
+          - not_null
+
+  - name: stg_supplier_meter_readings_monthly
+    description: "Relevés de consommation mensuels normalisés depuis raw.supplier_meter_readings (grain = monthly)."
+    columns:
+      - name: supplier
+        description: "Nom du fournisseur normalisé."
+        data_tests:
+          - not_null
+
+      - name: prm
+        description: "Identifiant PRM/PDL."
+        data_tests:
+          - not_null
+
+      - name: grain
+        description: "Grain de la donnée, attendu = monthly."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['monthly']
+
+      - name: period_start
+        description: "Début de la période."
+        data_tests:
+          - not_null
+
+      - name: period_end
+        description: "Fin de la période."
+        data_tests:
+          - not_null
+
+      - name: cadran
+        description: "Cadran tarifaire normalisé."
+        data_tests:
+          - not_null
+
+      - name: kwh
+        description: "Consommation en kWh."
+        data_tests:
+          - not_null
+
+      - name: read_type
+        description: "Type de relevé normalisé."
+        data_tests:
+          - not_null
+
+      - name: period_days
+        description: "Durée de la période en jours."
+        data_tests:
+          - not_null
+
+      - name: has_invalid_period
+        description: "Flag si period_end <= period_start."
+        data_tests:
+          - not_null
+
+      - name: has_negative_kwh
+        description: "Flag si kwh < 0."
+        data_tests:
+          - not_null
+
+      - name: has_decreasing_index
+        description: "Flag si index_end < index_start."
+        data_tests:
+          - not_null
+
+  - name: stg_supplier_power_max_daily
+    description: "Puissances maximales journalières normalisées depuis raw.supplier_power_max (grain = daily)."
+    columns:
+      - name: supplier
+        description: "Nom du fournisseur normalisé."
+        data_tests:
+          - not_null
+
+      - name: prm
+        description: "Identifiant PRM/PDL."
+        data_tests:
+          - not_null
+
+      - name: grain
+        description: "Grain de la donnée, attendu = daily."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['daily']
+
+      - name: period_date
+        description: "Date de la mesure journalière."
+        data_tests:
+          - not_null
+
+      - name: has_negative_power
+        description: "Flag si pmax_kw ou pmax_kva < 0."
+        data_tests:
+          - not_null
+
+  - name: stg_supplier_power_max_monthly
+    description: "Puissances maximales mensuelles normalisées depuis raw.supplier_power_max (grain = monthly)."
+    columns:
+      - name: supplier
+        description: "Nom du fournisseur normalisé."
+        data_tests:
+          - not_null
+
+      - name: prm
+        description: "Identifiant PRM/PDL."
+        data_tests:
+          - not_null
+
+      - name: grain
+        description: "Grain de la donnée, attendu = monthly."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['monthly']
+
+      - name: period_date
+        description: "Date de référence mensuelle."
+        data_tests:
+          - not_null
+
+      - name: month_start
+        description: "Premier jour du mois normalisé."
+        data_tests:
+          - not_null
+
+      - name: has_negative_power
+        description: "Flag si pmax_kw ou pmax_kva < 0."
+        data_tests:
+          - not_null
