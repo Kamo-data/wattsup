@@ -87,29 +87,36 @@ Metabase dashboards
 ```
 ---
 ## Modèles dbt principaux
+
 Staging
 `stg_supplier_meter_readings_hourly`
 `stg_supplier_meter_readings_monthly`
 `stg_supplier_power_max_daily`
 `stg_supplier_power_max_monthly`
+
 Marts
 `fct_energy_hourly`
 `agg_energy_daily`
 `fct_power_max_daily`
 `agg_power_max_monthly`
+
 ---
 ## Qualité des données
+
 Le projet inclut des tests dbt sur :
-valeurs nulles
-valeurs autorisées (`grain`)
-cohérence des périodes
-consommation négative
-puissance négative
-champs clés de restitution
+
+- valeurs nulles
+- valeurs autorisées (`grain`)
+- cohérence des périodes
+- consommation négative
+- puissance négative
+- champs clés de restitution
+
 Build validé sur la V1 :
 92 tests passés
 0 erreur
 0 warning
+
 ---
 ## Dashboards Metabase
 1. Vue d’ensemble consommation
