@@ -1,0 +1,97 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    description: "Tables brutes ingestées depuis les exports fournisseurs (Engie/Linky)."
+
+    tables:
+      - name: supplier_meter_readings
+        description: "Relevés de consommation fournisseur, multi-grain (monthly, hourly)."
+        columns:
+          - name: supplier
+            description: "Nom du fournisseur source, ex: engie."
+            data_tests:
+              - not_null
+
+          - name: prm
+            description: "Identifiant PRM/PDL si disponible."
+            data_tests:
+              - not_null
+
+          - name: grain
+            description: "Grain de la donnée brute : monthly ou hourly."
+            data_tests:
+              - not_null
+              - accepted_values:
+                  values: ['monthly', 'hourly']
+
+          - name: period_start
+            description: "Début de la période de consommation."
+            data_tests:
+              - not_null
+
+          - name: period_end
+            description: "Fin de la période de consommation."
+            data_tests:
+              - not_null
+
+          - name: cadran
+            description: "Cadran tarifaire brut (HP, HC, BASE, vide selon export)."
+            data_tests:
+              - not_null
+
+          - name: kwh
+            description: "Consommation brute en kWh."
+            data_tests:
+              - not_null
+
+          - name: read_type
+            description: "Type de relevé ou type de donnée brute."
+            data_tests:
+              - not_null
+
+          - name: source_file
+            description: "Nom du fichier source importé."
+            data_tests:
+              - not_null
+
+          - name: source_row
+            description: "Numéro de ligne dans le fichier source."
+            data_tests:
+              - not_null
+
+      - name: supplier_power_max
+        description: "Puissances maximales brutes, en grain daily ou monthly."
+        columns:
+          - name: supplier
+            description: "Nom du fournisseur source, ex: engie."
+            data_tests:
+              - not_null
+
+          - name: prm
+            description: "Identifiant PRM/PDL si disponible."
+            data_tests:
+              - not_null
+
+          - name: grain
+            description: "Grain de la donnée brute : daily ou monthly."
+            data_tests:
+              - not_null
+              - accepted_values:
+                  values: ['daily', 'monthly']
+
+          - name: period_date
+            description: "Date de la mesure (jour ou premier jour du mois)."
+            data_tests:
+              - not_null
+
+          - name: source_file
+            description: "Nom du fichier source importé."
+            data_tests:
+              - not_null
+
+          - name: source_row
+            description: "Numéro de ligne dans le fichier source."
+            data_tests:
+              - not_null

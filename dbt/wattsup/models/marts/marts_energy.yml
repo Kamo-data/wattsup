@@ -1,0 +1,154 @@
+version: 2
+
+models:
+  - name: fct_energy_hourly
+    description: "Table de faits horaire issue des relevés horaires normalisés."
+    columns:
+      - name: supplier
+        description: "Nom du fournisseur."
+        data_tests:
+          - not_null
+
+      - name: prm
+        description: "Identifiant PRM/PDL."
+        data_tests:
+          - not_null
+
+      - name: period_start
+        description: "Début de l’intervalle."
+        data_tests:
+          - not_null
+
+      - name: period_end
+        description: "Fin de l’intervalle."
+        data_tests:
+          - not_null
+
+      - name: interval_minutes
+        description: "Durée de l’intervalle en minutes."
+        data_tests:
+          - not_null
+
+      - name: kwh
+        description: "Consommation sur l’intervalle."
+        data_tests:
+          - not_null
+
+      - name: day_date
+        description: "Date de rattachement."
+        data_tests:
+          - not_null
+
+      - name: month_start
+        description: "Premier jour du mois de rattachement."
+        data_tests:
+          - not_null
+
+      - name: has_invalid_period
+        description: "Flag si la période est invalide."
+        data_tests:
+          - not_null
+
+      - name: has_negative_kwh
+        description: "Flag si la consommation est négative."
+        data_tests:
+          - not_null
+
+  - name: agg_energy_daily
+    description: "Agrégat journalier de consommation à partir de la table de faits horaire."
+    columns:
+      - name: supplier
+        description: "Nom du fournisseur."
+        data_tests:
+          - not_null
+
+      - name: prm
+        description: "Identifiant PRM/PDL."
+        data_tests:
+          - not_null
+
+      - name: day_date
+        description: "Jour agrégé."
+        data_tests:
+          - not_null
+
+      - name: month_start
+        description: "Premier jour du mois de rattachement."
+        data_tests:
+          - not_null
+
+      - name: interval_count
+        description: "Nombre d’intervalles agrégés sur la journée."
+        data_tests:
+          - not_null
+
+      - name: kwh_total
+        description: "Consommation totale journalière."
+        data_tests:
+          - not_null
+
+      - name: has_invalid_period
+        description: "Flag si au moins un intervalle invalide est présent."
+        data_tests:
+          - not_null
+
+      - name: has_negative_kwh
+        description: "Flag si au moins un intervalle négatif est présent."
+        data_tests:
+          - not_null
+
+  - name: fct_power_max_daily
+    description: "Table de faits journalière des puissances maximales."
+    columns:
+      - name: supplier
+        description: "Nom du fournisseur."
+        data_tests:
+          - not_null
+
+      - name: prm
+        description: "Identifiant PRM/PDL."
+        data_tests:
+          - not_null
+
+      - name: day_date
+        description: "Jour de la puissance max."
+        data_tests:
+          - not_null
+
+      - name: month_start
+        description: "Premier jour du mois de rattachement."
+        data_tests:
+          - not_null
+
+      - name: has_negative_power
+        description: "Flag si une puissance négative est détectée."
+        data_tests:
+          - not_null
+
+  - name: agg_power_max_monthly
+    description: "Agrégat mensuel des puissances maximales, combinant la vue mensuelle source et les agrégats journaliers."
+    columns:
+      - name: supplier
+        description: "Nom du fournisseur."
+        data_tests:
+          - not_null
+
+      - name: prm
+        description: "Identifiant PRM/PDL."
+        data_tests:
+          - not_null
+
+      - name: month_start
+        description: "Premier jour du mois."
+        data_tests:
+          - not_null
+
+      - name: has_negative_power_daily
+        description: "Flag si une puissance journalière négative est détectée dans le mois."
+        data_tests:
+          - not_null
+
+      - name: has_negative_power_monthly
+        description: "Flag si une puissance mensuelle négative est détectée."
+        data_tests:
+          - not_null

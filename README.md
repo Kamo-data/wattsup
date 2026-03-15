@@ -1,241 +1,180 @@
-
-[![CI](https://github.com/Kamo-data/wattsup/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Kamo-data/wattsup/actions/workflows/ci.yml)
-[![Docs](https://github.com/Kamo-data/wattsup/actions/workflows/pages.yml/badge.svg?branch=main)](https://github.com/Kamo-data/wattsup/actions/workflows/pages.yml)
-
-
-# WattsUp — Suivi conso électricité (CSV fournisseur → Postgres → dbt → Metabase)
-
-WattsUp est une mini-stack data locale destinée à **ingérer des relevés d’électricité** (CSV fournisseur), les **historiser dans PostgreSQL**, les **modéliser avec dbt** et les **visualiser dans Metabase**.
-
-Objectif : disposer d’un pipeline simple, rejouable et maintenable, avec des contrôles de qualité de données adaptés aux cas réels (données manquantes, incohérences, reset compteur, etc.).
-
-![Dashboard WattsUp](docs/screenshots/Dashboard.png)
-
+Watt'sUp — Suivi conso électricité (Engie → PostgreSQL → dbt → Metabase)
+![CI](https://github.com/Kamo-data/wattsup/actions/workflows/ci.yml/badge.svg)
+![Publish dbt docs](https://github.com/Kamo-data/wattsup/actions/workflows/pages.yml/badge.svg)
+Watt’sUp est un projet portfolio orienté Data Engineering / Analytics.  
+L’objectif est de transformer des exports fournisseur réels en données propres, testées et exploitables pour analyser la consommation électrique d’un foyer.
+Le projet couvre :
+l’ingestion de fichiers Engie
+le stockage dans PostgreSQL
+la modélisation avec dbt
+les tests de qualité
+la visualisation dans Metabase
 ---
-
-## 1) Vue d’ensemble
-
-### Ce que fait le pipeline
-- Charge un export CSV fournisseur (HP/HC) dans `raw.supplier_meter_readings`
-- Standardise les types et le format dans `analytics.stg_supplier_meter_readings`
-- Calcule des faits et agrégats pour l’analyse :
-  - `analytics.fct_energy_period`
-  - `analytics.agg_energy_calendar_month_est`
-- Applique des **tests dbt** (staging + règles métier)
-- Expose les tables à Metabase
-
-### Stack
-- **Python** : ingestion CSV + upsert (idempotent)
-- **PostgreSQL** : stockage (raw + analytics)
-- **dbt** : staging + marts + tests
-- **Metabase** : dashboard / exploration
-- **Docker Compose** : reproductibilité
-
+Objectif
+Construire un pipeline local, simple et reproductible pour répondre à des questions concrètes :
+quelle est la consommation totale observée ?
+comment évolue la consommation au fil du temps ?
+quelles sont les heures de pointe ?
+quelle différence entre semaine et week-end ?
+quels sont les pics de puissance maximale ?
 ---
-
-## 2) Architecture (simplifiée)
-
-**CSV fournisseur**  
-→ ingestion Python  
-→ `raw.supplier_meter_readings`
-
-`raw.supplier_meter_readings`  
-→ dbt staging  
-→ `analytics.stg_supplier_meter_readings`
-
-`analytics.stg_supplier_meter_readings`  
-→ dbt marts  
-→ `analytics.fct_energy_period` (consommation par période)  
-→ `analytics.agg_energy_calendar_month_est` (agrégat mensuel estimé)
-
-→ Metabase (dashboards)
-
+Données prises en charge
+Le projet supporte actuellement des exports Engie de type :
+consommation mensuelle
+consommation horaire
+puissance maximale journalière
+puissance maximale mensuelle
+Les identifiants sensibles sont anonymisés dans les restitutions (`PRM_ANONYMISE`).
 ---
-
-## 3) Modèles dbt
-
-### `analytics.stg_supplier_meter_readings` (staging)
-Normalisation des relevés fournisseur :
-- typage (dates / numériques)
-- cadran normalisé (`HP` / `HC`)
-- préparation du grain utilisé en marts
-
-### `analytics.fct_energy_period` (mart)
-Consommation et estimation de coût par période (période = intervalle [period_start, period_end]) :
-- `kwh_hp`, `kwh_hc`, `kwh_total`
-- `period_days`, `kwh_per_day_est`
-- tarification HP/HC jointe par date d’effet (`config.tariff_hp_hc`)
-- `has_negative_kwh` (flag qualité)
-- `cost_est_eur` (protégé : `NULL` si la période est invalide)
-
-### `analytics.agg_energy_calendar_month_est` (mart)
-Agrégation mensuelle (estimation) :
-- `kwh_hp`, `kwh_hc`, `kwh_total`
-- `days_covered`
-- `kwh_per_day_est`
-- `cost_est_eur`
-
+Stack technique
+Python
+PostgreSQL
+dbt
+Docker Compose
+Metabase
+GitHub Actions
+GitHub Pages pour la documentation dbt
 ---
-
-## 4) Data Quality / Tests
-
-Le pipeline inclut des contrôles pour éviter d’alimenter Metabase avec des valeurs incohérentes.
-
-### 4.1 Tests “génériques” (schema tests)
-Définis dans les `schema.yml`.
-
-**Sur `stg_supplier_meter_readings`**
-- `not_null` : `period_start`, `period_end`, `cadran`, `kwh`
-- `accepted_values` : `cadran` ∈ {`HP`, `HC`}
-
-**Sur `fct_energy_period`**
-- `not_null` : `period_start`, `period_end`
-
-### 4.2 Tests SQL “métier” (custom tests)
-Fichiers dans `dbt/wattsup/tests/`.
-
-1) **Unicité au bon grain**
-- règle : 1 relevé max par `period_start` et `cadran`
-- fichier : `test_unique_stg_period_start_cadran.sql`
-
-2) **Pas de consommation négative**
-- règle : `kwh_hp`, `kwh_hc`, `kwh_total` doivent être ≥ 0
-- fichier : `test_no_negative_kwh_period.sql`
-
-3) **Coût non calculé si données invalides**
-- règle : si `has_negative_kwh = true` alors `cost_est_eur` doit être `NULL`
-- fichier : `test_cost_null_when_negative_kwh.sql`
-
-### 4.3 Pourquoi le flag `has_negative_kwh` ?
-Certaines sources (CSV fournisseur) peuvent générer des deltas négatifs (ex : reset compteur, correction fournisseur).
-- le modèle conserve le signal via `has_negative_kwh`
-- le coût est neutralisé (`NULL`) tant que le cas n’est pas explicitement traité (data cleaning / règles de correction)
-
----
-
-## 5) Démarrage rapide
-
-### Pré-requis
-- Docker Desktop
-- Git
-- (optionnel) Python 3.10+ si exécution ingestion en local
-
-### 5.1 Lancer la stack
-À la racine du repo :
-```bash
-docker compose up -d
-docker compose ps
+Architecture
+```text
+Exports Engie (CSV/XLSX)
+        ↓
+Python ingestion
+        ↓
+raw.supplier_meter_readings
+raw.supplier_power_max
+        ↓
+dbt staging
+        ↓
+dbt marts
+        ↓
+Metabase dashboards
 ```
-
-### 5.2 Ingestion d’un CSV (local)
-
-Déposer un CSV dans `data/raw/` (ex : `sample_releve_mensuelles.csv`).
-
-Lancer le pipeline complet (depuis la racine du repo) :
+---
+Structure du projet
+```text
+.
+├── data/raw/                  # fichiers source locaux
+├── dbt/wattsup/
+│   ├── models/staging/        # normalisation des données brutes
+│   ├── models/marts/          # tables analytiques
+│   └── tests/                 # tests dbt
+├── docs/screenshots/          # captures des dashboards
+├── ingest/                    # scripts d’ingestion Python
+├── postgres/                  # initialisation PostgreSQL
+├── scripts/                   # scripts d’exécution locale
+├── docker-compose.yml
+└── README.md
+```
+---
+Modèles dbt principaux
+Staging
+`stg_supplier_meter_readings_hourly`
+`stg_supplier_meter_readings_monthly`
+`stg_supplier_power_max_daily`
+`stg_supplier_power_max_monthly`
+Marts
+`fct_energy_hourly`
+`agg_energy_daily`
+`fct_power_max_daily`
+`agg_power_max_monthly`
+---
+Qualité des données
+Le projet inclut des tests dbt sur :
+valeurs nulles
+valeurs autorisées (`grain`)
+cohérence des périodes
+consommation négative
+puissance négative
+champs clés de restitution
+Build validé sur la V1 :
+92 tests passés
+0 erreur
+0 warning
+---
+Dashboards Metabase
+1. Vue d’ensemble consommation
+consommation totale
+nombre de jours analysés
+moyenne journalière
+consommation journalière
+répartition journalière
+consommation mensuelle
+![Vue d'ensemble consommation](docs/screenshots/01_dashboard_overview.png)
+2. Profil horaire
+consommation moyenne par heure
+comparaison semaine vs week-end
+top 20 pics de consommation horaire
+intensité moyenne jour/heure
+![Profil horaire](docs/screenshots/02_dashboard_hourly.png)
+3. Puissance maximale
+pic de puissance max
+puissance max journalière
+puissance max mensuelle
+moyenne mensuelle des pics
+écart mensuel vs pic journalier
+top 20 pics de puissance
+![Puissance maximale](docs/screenshots/03_dashboard_power.png)
+---
+Lancer le projet en local
+1. Démarrer PostgreSQL et Metabase
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\run_all.ps1
+docker compose up -d postgres metabase
 ```
-> Note : `run_all.ps1` exécute typiquement  
-> installation deps → ingestion → dbt build/run → dbt test
-
-### 5.3 Exécuter dbt dans Docker (recommandé)
-```bash
+Metabase sera disponible sur :
+```text
+http://localhost:3001
+```
+2. Installer les dépendances Python
+```powershell
+python -m pip install -r requirements.txt
+```
+3. Ingestion des exports Engie
+```powershell
+python .\ingest\ingest_engie_exports.py `
+  --supplier engie `
+  --prm "PRM_ANONYMISE" `
+  --files `
+    ".\data\raw\Relèves_mensuelles_électricité.csv" `
+    ".\data\raw\Relèves_horaires_électricité.xlsx" `
+    ".\data\raw\puissance_journaliere_max_linky.csv" `
+    ".\data\raw\puissance_mensuelle_max_linky.csv"
+```
+4. Construire les modèles dbt
+```powershell
 docker compose run --rm dbt build
-docker compose run --rm dbt test
 ```
-
-## 6) Vérifications rapides (PostgreSQL)
-Compter les relevés raw :
-```bash
-docker compose exec postgres psql -U energy -d wattsup -c "select count(*) from raw.supplier_meter_readings;"
-```
-Afficher les agrégats mensuels :
-```bash
-docker compose exec postgres psql -U energy -d wattsup -c "select * from analytics.agg_energy_calendar_month_est order by month desc limit 12;"
-```
-Inspecter le schéma du mart :
-```bash
-docker compose exec postgres psql -U energy -d wattsup -c "\d+ analytics.fct_energy_period"
-```
-
-## 7) Metabase
-Ouvrir Metabase :
-
-<http://localhost:3001>
-
-Connexion PostgreSQL depuis Metabase :
-- Host : postgres
-- Port : 5432
-- Database : wattsup
-- User : energy
-- Password : energy
-
-## 8) Structure du repo
-- ingest/ : ingestion CSV (Python)
-- postgres/init.sql : init DB (schemas/tables)
-- dbt/wattsup/ : projet dbt (models + tests)
-- dbt/wattsup/tests/ : tests SQL custom
-- docs/screenshots/ : captures Metabase
-- docker-compose.yml : stack Postgres + dbt + Metabase
-- scripts/run_all.ps1 : pipeline local (ingest + dbt)
-
-## 9) Runbook / Troubleshooting
-### 9.1 Metabase (port déjà pris)
-Metabase est mappé en 3001:3000.
-Modifier le port hôte dans `docker-compose.yml` (ex : 3002:3000), puis relancer :
-```bash
-docker compose down
-docker compose up -d
-```
-
-### 9.2 dbt : erreur de compilation sur accepted_values
-Cause fréquente : versions dbt différentes entre l’environnement local et l’image Docker, ou syntaxe de test non compatible avec la version exécutée.
-Actions recommandées :
-- privilégier l’exécution dbt via Docker Compose (limite les écarts)
-- vérifier l’alignement des versions dbt (core + adapter)
-Diagnostic :
-```bash
-dbt --version
-docker compose run --rm dbt --version
-```
-Rappel de compatibilité (résumé) :
-- dbt plus ancien (ex : 1.9) : accepted_values attend généralement values: [...]
-- dbt plus récent (ex : 1.11+) : accepted_values recommande arguments: { values: [...] }
-
-### 9.3 dbt : erreurs SQL (ex : relation does not exist)
-Causes fréquentes :
-- alias/CTE non définis (ex : from tar sans CTE tar)
-- renommage d’un CTE sans propagation
-- dépendance non construite
-
-Isoler un modèle :
-```bash
-docker compose run --rm dbt build --select fct_energy_period
-```
-
-### 9.4 PowerShell : chemin de script introuvable
-Le script `scripts/run_all.ps1` se trouve à la racine du repo.
-
-Si l’exécution se fait depuis `dbt/wattsup/`, revenir à la racine avant de lancer :
+5. Générer la documentation dbt
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\run_all.ps1
+docker compose run --rm dbt docs generate
 ```
-
-### 9.5 Docker Desktop / virtualisation
-Si Docker ne démarre pas :
-- vérifier WSL2 / virtualisation BIOS / features Windows
-- redémarrer Docker Desktop
-
-## 10) Évolutions possibles
-- support multi-énergies (gaz / eau) + multi-compteurs
-- historisation plus complète des tarifs (HP/HC) + contrôles de couverture tarifaire
-- règles de correction “reset compteur” (reconstruction de séries, interpolation, etc.)
-- orchestration planifiée (Task Scheduler / cron) + logs structurés
-- docs dbt + publication (dbt docs) et validation CI
-
-## Auteur
-David Limoisin — Data Engineer
-Projet orienté industrialisation, SQL/ELT, data quality et reproductibilité.
-
-<!-- ci smoke -->
-
+---
+Ce que le projet démontre
+Ce projet montre ma capacité à :
+ingérer des fichiers réels hétérogènes
+modéliser une donnée exploitable avec dbt
+mettre en place des tests de qualité
+produire des indicateurs analytiques lisibles
+relier une logique technique à un besoin métier concret
+---
+Positionnement portfolio
+Watt’sUp illustre un cas concret de mini-stack data reproductible :
+ingestion
+stockage
+transformation
+validation
+visualisation
+C’est un projet conçu pour démontrer une approche pragmatique de Data Engineer / Data Analyst, proche des contraintes rencontrées en contexte réel.
+---
+Pistes d’évolution
+support multi-fournisseurs
+harmonisation métier kW / kVA
+enrichissement météo / saisonnalité
+alertes sur anomalies de consommation
+dashboard plus “produit”
+industrialisation CI/CD plus poussée
+---
+Auteur
+David Limoisin  
+Data Engineer / SQL / BI
+GitHub : Kamo-data
